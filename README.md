@@ -46,19 +46,19 @@ Initial steps to be able to work remotely:
   
   - Connect in ssh with default credentials: pi / raspberry 
   
-    ```
+    ```bash
     ssh <USERNAME>@<PI ip>
     ```
   
   - change password: 
   
-    ```
+    ```bash
     passwd
     ```
   
   - On your computer [generate](https://www.raspberrypi.org/documentation/remote-access/ssh/passwordless.md) ssh key-pair for remote connection (easier) 
   
-    ```
+    ```bash
     ssh-keygen
     ```
   
@@ -66,13 +66,13 @@ Initial steps to be able to work remotely:
   
   -  Copy id to RPI
   
-     ```
+     ```bash
      ssh-copy-id <USERNAME>@<IP-ADDRESS>
      ```
   
   -  Backup private key (just in case)
   
-     ```
+     ```bash
      cp ~/.ssh/id_rsa ~/<keyname.pem>
      ```
   
@@ -80,20 +80,20 @@ Initial steps to be able to work remotely:
   
     -  Edit sshd_config
   
-    ```
+    ```bash
     sudo nano /etc/ssh/sshd_config
     ```
   
     - Uncomment and set to no, the line:
   
-    ```
+    ```bash
     # To disable tunneled clear text passwords, change to no here!
     PasswordAuthentication no
     ```
   
     -  Restart ssh service
   
-    ```
+    ```bash
      service ssh restart
     ```
   
@@ -118,46 +118,50 @@ Inspired by this [article](https://engineerworkshop.com/2019/01/16/setup-an-ngin
 
 - Update packages
 
-  ```
+  ```bash
   sudo apt-get update
   sudo apt-get upgrade
   ```
 
 - Install Nginx
 
-  ```
+  ```bash
   sudo apt-get install nginx
   ```
 
 - Check if Nginx is running, by going in web browser to <local RPI IP>
 
   <img src="Nginx_running.png" style="zoom:50%;" />
+  
+- check which version is running:
 
-TO BE CONTINUED -----------------------------------------------------------
+  ```bash
+  sudo nginx -v
+  ```
 
-## Manage Dynamic DNS from RPi (instead of ISP router)
+- check error log file
 
-
-
-
+  ```bash
+  cat /var/log/nginx/error.log
+  ```
 
 ## Install certbot for SSL certificates
 
-- Install certbot
+- Install [certbot](https://certbot.eff.org/lets-encrypt/debianbuster-nginx)
 
-  ```
+  ```bash
   sudo apt-get install certbot python-certbot-nginx
   ```
 
-- Run certbot for Nginx for <yourdomain.com>
+- Run certbot for Nginx for <yourdomain.com> **NOT DONE**
 
-  ```
+  ```bash
   sudo certbot --nginx -d <yourdomain.com>
   ```
 
-- Test certificate renewal
+- Test certificate renewal  **NOT DONE**
 
-  ```
+  ```bash
   sudo certbot renew --dry-run
   ```
 
@@ -171,15 +175,13 @@ TO BE CONTINUED -----------------------------------------------------------
 
 
 
-- Edit default config
+- Edit default config  **NOT DONE**
 
-```
+```bash
 sudo nano /etc/nginx/sites-enabled/default 
 ```
 
- 
-
-```
+```nginx
 # Default HTTP server -> redirect to HTTPS
 server {
     listen 80 default_server;
@@ -207,58 +209,70 @@ server {
 
 - Configure redirections:
 
-  - Go to  Nginx sites-available folder :
+  - Go to Nginx sites-available folder :
 
-    ```
+    ```bash
     cd /etc/nginx/sites-available/
     ```
 
   - Create config file for <yourdomain.com>:
 
-    ```
+    ```bash
     sudo nano <yourdomain.com>.conf
     ```
 
-  - Edit conf file like this:
+  - Edit Nginx config file like this: **(DSM not working - Internal router not working - ISP not working)**
 
-example1:
-
-```
+```nginx
 server {
-	listen 80;
-	server_name example.com;
-	location / {
-	proxy_pass http://192.x.x.x;
-	}
-}
+        client_max_body_size 2m;
+        listen 80;
+        listen [::]:80;
+        server_name <yourdomain.com>;
+        location /website1 {
+                index index.php;
+                proxy_pass http://192.168.xx.xx:80/path/;
+        }
+        location /phpmyadmin {
+                proxy_pass http://192.168.xx.xx:80/phpMyAdmin;
+        }
+        location /jeedom/ {
+                root /var/www/hmtl;
+                index index.php;
+                proxy_pass http://192.168.xx.xx:80/;
+        }
+		location /dsm {
+                index index.cgi;
+                rewrite ^/dsm/(.*)$ /$1 break;
+                proxy_set_header Host $host;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_pass http://192.168.xx.xx:5000/;
+        }
+        location /router {
+                proxy_pass "http://192.168.x.xx:xxxx/";
+        }
+}      
 ```
 
-example 2
+- Link config file
 
-```
-server {
-    listen       443;
-
-    ssl_certificate /etc/letsencrypt/live/www.yourdomain.com/fullchain.pem; # managed by Certbot
-    ssl_certificate_key /etc/letsencrypt/live/www.yourdomain.com/privkey.pem; # managed by Certbot
-    include /etc/letsencrypt/options-ssl-nginx.conf; # managed by Certbot
-    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem; # managed by Certbot
-
-    server_name  orchid.yourdomain.com;
-    location / {
-        proxy_pass http://192.168.100.101;
-    }
-    location /service/streams/webrtc {
-
-        proxy_read_timeout 31536000;
-        proxy_pass http://192.168.100.101;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "Upgrade";
-    }
-}
+```bash
+sudo ln -s /etc/nginx/sites-available/<yourdomain.com>.conf /etc/nginx/sites-enabled/<yourdomain.com>.conf
 ```
 
+- Test config files syntax
 
+```bash
+sudo nginx -t
+```
+
+- Reload Nginx configuration files:
+
+```bash
+sudo nginx -s reload
+```
 
 ## 
+
+## Manage Dynamic DNS from RPi (instead of ISP router)
