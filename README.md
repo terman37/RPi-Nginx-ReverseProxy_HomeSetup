@@ -2,7 +2,7 @@
 
 ## Main Idea
 
-Setup a reverse proxy to gain access to: 
+**Setup a reverse proxy** to gain access to: 
 
 - My synology NAS *(without quickconnect)*
   - DSM
@@ -12,21 +12,15 @@ Setup a reverse proxy to gain access to:
   - Others services... (TBD)
 
 - Home Automation Web server Jeedom *(without using included OpenVPN)*
-- My Router config Page (Asus RT-AC68)
-- My ISP Router
 - Others (maybe create interface to add/remove/edit proxy settings)
 
-via `https://<my domain>.ddns.net/path_to_service`
+via `https://<my domain>/path_to_service`
 
-## Config
+**Constraints:**
 
-- Dyndns already created (today on ISP router)
-  - Move to RPI ? ddclient - TBD
-- Reverse proxy will run on an unused Raspberry Pi
-
+- run on an unused Raspberry Pi B+
 - Connection to anywhere has to be done through TLS encrypted https: 
-  - target CryptCheck A or A+
-
+  - target SSL Labs A or A+
 - SSL/TLS certificates from Let's encrypt and renewed automatically
 
 ## Initial Config (Rpi - routers)
@@ -109,15 +103,10 @@ Initial steps to be able to work remotely:
 - On internal router:
   
   - Bind RPI MAC address to <RPI IP> 
-  - redirect 22 to <RPI IP>:22
+  - redirect port 22 to <RPI IP>:22 (for remote setup)
 
-- Check if remote access to Raspberry is working
-
-- Check if remote access to my router is working ( just in case - if I need to fine tune settings)
 
 ## Install Nginx
-
-Inspired by this [article](https://engineerworkshop.com/2019/01/16/setup-an-nginx-reverse-proxy-on-a-raspberry-pi-or-any-other-debian-os/)
 
 - Update packages
 
@@ -164,53 +153,28 @@ Inspired by this [article](https://engineerworkshop.com/2019/01/16/setup-an-ngin
   
 - ssllabs.com --> Grade A
 
-## Configure Nginx:
+  <img src="SSL_Labs_report.png" alt="SSL_Labs_report" style="zoom: 33%;" />
 
-1. Use the Let's Encrypt HTTPS certificates provided by certbot.
-2. Automatically redirect HTTP to HTTPS
-3. Close connections for any subdomains we're not trying to proxy
+- improve SSL security:
 
-- backup default config
+  ```bash
+  sudo nano /etc/letsencrypt/options-ssl-nginx.conf
+  ```
 
-```bash
-sudo cp /etc/nginx/sites-available/default ~/nginx-default.bak
-```
+  - modify line as follow:
 
-- Edit default config, replace content with this:
-  - redirect http to https
-  - disable https nginx default web server
-
-```bash
-sudo nano /etc/nginx/sites-available/default 
-```
-
-```nginx
-# Default HTTP server -> redirect to HTTPS
-server {
-    listen 80 default_server;
-    listen [::]:80 default_server;
-    server_name _;
-    return 301 https://$host$request_uri;
-}
-
-# Default HTTPS server (just disconnect)
-server {
-    listen [::]:443 ssl ipv6only=on; # managed by Certbot
-    listen 443 ssl; # managed by Certbot
-
-    ssl_certificate /etc/letsencrypt/live/<yourdomain.com>/fullchain.pem; # managed by Certbot
-    ssl_certificate_key /etc/letsencrypt/live/<yourdomain.com>/privkey.pem; # managed by Certbot
-    include /etc/letsencrypt/options-ssl-nginx.conf; # managed by Certbot
-    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem; # managed by Certbot
-
-    server_name _;
+    ```nginx
+    # Allow only TLS 1.2;
+    #ssl_protocols TLSv1 TLSv1.1 TLSv1.2;
+    ssl_protocols TLSv1.2;
     
-    if ($request_method !~ ^(GET|HEAD|POST)$ ) {
-    return 444;
-    }
-    return 444;
-}
-```
+    # Change to more recommended ciphers
+    #ssl_ciphers "ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA3$
+    
+    ssl_ciphers ECDHE-RSA-AES256-GCM-SHA512:DHE-RSA-AES256-GCM-SHA512:ECDHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-SHA384;
+    ```
+
+## Configure Nginx:
 
 - Configure redirections:
 
@@ -223,60 +187,98 @@ server {
   - Edit Nginx config file to look like this: 
 
 ```nginx
+# Default HTTP server -> redirect to HTTPS
 server {
-    
-        listen 443 ssl;
+    listen 80 default_server;
+    listen [::]:80 default_server;
+    server_name <yourdomain.com>;
+    return 301 https://$host$request_uri;
+}
+server {
+	listen 443 ssl;
+	listen [::]:443 ssl;
 
-        ssl_certificate /etc/letsencrypt/live/<yourdomain.com>/fullchain.pem;
-    	ssl_certificate_key /etc/letsencrypt/live/<yourdomain.com>/privkey.pem;
-    	include /etc/letsencrypt/options-ssl-nginx.conf; 
-        ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem; 
-        
-    	server_name <yourdomain.com>;
-    
-        location /website1/ {
-                index index.php;
-                proxy_pass http://192.168.xx.xx:80/path/;
-        }
-        location /phpmyadmin/ {
-                proxy_pass http://192.168.xx.xx:80/phpMyAdmin;
-        }
-        location /jeedom/ {
-                root /var/www/hmtl/;
-                index index.php;
-                proxy_pass http://192.168.xx.xx:80/;
-        }
-		location /dsm {
-                index index.cgi;
-                rewrite ^/dsm/(.*)$ /$1 break;
-                proxy_set_header Host $host;
-                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-                proxy_set_header X-Real-IP $remote_addr;
-                proxy_pass http://192.168.xx.xx:5000/;
-        }
-        location /router {
-                proxy_pass "http://192.168.x.xx:xxxx/";
-        }
-}      
+	ssl_certificate /etc/letsencrypt/live/<yourdomain.com>/fullchain.pem;
+	ssl_certificate_key /etc/letsencrypt/live/<yourdomain.com>/privkey.pem;
+	include /etc/letsencrypt/options-ssl-nginx.conf;
+	ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+
+	server_name <yourdomain.com>;
+
+	location /cpts/ {
+		index index.php index.html;
+		proxy_pass http://192.168.xx.xx:10001/;
+	}
+	location /php/ {
+		index index.php;
+		proxy_pass https://192.168.xx.xx:10010/;
+	}
+	location /moments/ {
+		proxy_pass https://192.168.xx.xx:10005/;
+	}
+	location /drive/ {
+		proxy_pass https://192.168.xx.xx:10003/;
+	}
+	location /surveillance/ {
+        proxy_pass https://192.168.xx.xx:9901/;
+	}
+	location /dsm/ {
+		proxy_pass https://192.168.xx.xx:5001/;
+	}
+	location /jeedom/ {
+		root /var/www/html/;
+		index index.php;
+		proxy_pass http://192.168.xx.xx:80/;                                     
+	}
+	# not working for now return bad gateway 502 error
+    location /router/ {
+		proxy_pass http://192.168.xx.xx:xxxx/;
+	}
+	
+    # Close connections for any other subdomains
+	location / {
+		return 444;
+	}
+}
 ```
 
 - Link config file
 
-```bash
-sudo ln -s /etc/nginx/sites-available/<yourdomain.com>.conf /etc/nginx/sites-enabled/<yourdomain.com>.conf
-```
+  ```bash
+  sudo ln -s /etc/nginx/sites-available/<yourdomain.com>.conf /etc/nginx/sites-		enabled/<yourdomain.com>.conf
+  ```
 
-- Test config files syntax
+- Edit Nginx config (to disable default config file):
 
-```bash
-sudo nginx -t
-```
+  ```bash
+  sudo nano /etc/nginx/nginx.conf
+  ```
+
+  - modify line:
+
+    ```nginx
+    include /etc/nginx/sites-enabled/*;
+    ```
+
+  - to: (so, it will not use anymore default file named "default") 
+
+    ```nginx
+    include /etc/nginx/sites-enabled/*.conf;
+    ```
+
+- Test new configuration
+
+  ```bash
+  sudo nginx -t
+  ```
 
 - Reload Nginx configuration files:
 
-```bash
-sudo nginx -s reload
-```
+  ```bash
+  sudo nginx -s reload
+  ```
+
+  
 
 ## 
 
