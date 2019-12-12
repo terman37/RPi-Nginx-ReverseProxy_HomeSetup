@@ -245,7 +245,7 @@ server {
 - Link config file
 
   ```bash
-  sudo ln -s /etc/nginx/sites-available/<yourdomain.com>.conf /etc/nginx/sites-		enabled/<yourdomain.com>.conf
+  sudo ln -s /etc/nginx/sites-available/<yourdomain.com>.conf /etc/nginx/sites-enabled/<yourdomain.com>.conf
   ```
 
 - Edit Nginx config (to disable default config file):
