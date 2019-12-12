@@ -174,6 +174,16 @@ Initial steps to be able to work remotely:
     ssl_ciphers ECDHE-RSA-AES256-GCM-SHA512:DHE-RSA-AES256-GCM-SHA512:ECDHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-SHA384;
     ```
 
+## Configure Synology vHosts:
+
+- For synology apps:
+
+  <img src="vhost_synoapps.png" alt="vhost_synoapps" style="zoom:50%;" />
+
+- For Webstation:
+
+  <img src="vhost_webstation.png" alt="vhost_webstation" style="zoom:50%;" />
+
 ## Configure Nginx:
 
 - Configure redirections:
