@@ -1,4 +1,4 @@
-# Home reverse proxy setup
+# Nginx-Reverse-Proxy Home-Setup
 
 ## Main Idea
 
@@ -9,9 +9,8 @@
   - Moments
   - Surveillance station
   - Web station
-  - Others services... (TBD)
-
 - Home Automation Web server Jeedom *(without using included OpenVPN)*
+- Personal website (php/js / MariaDB) hosted on NAS
 - Others (maybe create interface to add/remove/edit proxy settings)
 
 via `https://<my domain>/path_to_service`
@@ -84,10 +83,10 @@ Initial steps to be able to work remotely:
     
   - Uncomment and set to no, the line:
     
-  ```bash
+    ```bash
     # To disable tunneled clear text passwords, change to no here!
     PasswordAuthentication no
-  ```
+    ```
   
     -  Restart ssh service
   
@@ -196,62 +195,58 @@ Initial steps to be able to work remotely:
 
   - Edit Nginx config file to look like this: 
 
-```nginx
-# Default HTTP server -> redirect to HTTPS
-server {
-    listen 80 default_server;
-    listen [::]:80 default_server;
-    server_name <yourdomain.com>;
-    return 301 https://$host$request_uri;
-}
-server {
-	listen 443 ssl;
-	listen [::]:443 ssl;
+    ```nginx
+    # Default HTTP server -> redirect to HTTPS
+    server {
+        listen 80 default_server;
+        listen [::]:80 default_server;
+        server_name <yourdomain.com>;
+        return 301 https://$host$request_uri;
+    }
+    server {
+    	listen 443 ssl;
+    	listen [::]:443 ssl;
 
-	ssl_certificate /etc/letsencrypt/live/<yourdomain.com>/fullchain.pem;
-	ssl_certificate_key /etc/letsencrypt/live/<yourdomain.com>/privkey.pem;
-	include /etc/letsencrypt/options-ssl-nginx.conf;
-	ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+        ssl_certificate /etc/letsencrypt/live/<yourdomain.com>/fullchain.pem;
+        ssl_certificate_key /etc/letsencrypt/live/<yourdomain.com>/privkey.pem;
+        include /etc/letsencrypt/options-ssl-nginx.conf;
+        ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
 
-	server_name <yourdomain.com>;
+        server_name <yourdomain.com>;
 
-	location /cpts/ {
-		index index.php index.html;
-		proxy_pass http://192.168.xx.xx:10001/;
-	}
-	location /php/ {
-		index index.php;
-		proxy_pass https://192.168.xx.xx:10010/;
-	}
-	location /moments/ {
-		proxy_pass https://192.168.xx.xx:10005/;
-	}
-	location /drive/ {
-		proxy_pass https://192.168.xx.xx:10003/;
-	}
-	location /surveillance/ {
-        proxy_pass https://192.168.xx.xx:9901/;
-	}
-	location /dsm/ {
-		proxy_pass https://192.168.xx.xx:5001/;
-	}
-	location /jeedom/ {
-		root /var/www/html/;
-		index index.php;
-		proxy_pass http://192.168.xx.xx:80/;                                     
-	}
-	# not working for now return bad gateway 502 error
-    location /router/ {
-		proxy_pass http://192.168.xx.xx:xxxx/;
-	}
-	
-    # Close connections for any other subdomains
-	location / {
-		return 444;
-	}
-}
-```
-
+        location /cpts/ {
+            index index.php index.html;
+            proxy_pass http://192.168.xx.xx:10001/;
+        }
+        location /php/ {
+            index index.php;
+            proxy_pass https://192.168.xx.xx:10010/;
+        }
+        location /moments/ {
+            proxy_pass https://192.168.xx.xx:10005/;
+        }
+        location /drive/ {
+            proxy_pass https://192.168.xx.xx:10003/;
+        }
+        location /surveillance/ {
+            proxy_pass https://192.168.xx.xx:9901/;
+        }
+        location /dsm/ {
+            proxy_pass https://192.168.xx.xx:5001/;
+        }
+        location /jeedom/ {
+            root /var/www/html/;
+            index index.php;
+            proxy_pass http://192.168.xx.xx:80/;                                   
+        }
+        
+        # Close connections for any other subdomains
+        location / {
+            return 444;
+    }
+    }
+    ```
+  
 - Link config file
 
   ```bash
@@ -289,40 +284,6 @@ server {
   ```
 
   
-
-## 
-
-
-
-Add common headers to be included always:
-
-```bash
-sudo nano /etc/nginx/conf.d/proxy.conf
-```
-
-filled with
-
-```nginx
-proxy_redirect off;
-proxy_set_header Host $host;
-proxy_set_header X-Real-IP $remote_addr;
-proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-proxy_hide_header Strict-Transport-Security;
-proxy_hide_header X-Powered-By;
-proxy_hide_header *;
-proxy_intercept_errors on;
-proxy_buffering on;
-proxy_cache_key "$scheme://$host$request_uri";
-proxy_cache_path /var/cache/nginx levels=1:2 keys_zone=cache:10m inactive=7d max_size=700m;
-```
-
-## Manage Dynamic DNS from RPi (instead of ISP router)
-
-
-
-- TBD
-
-
 
 ## Tips
 
