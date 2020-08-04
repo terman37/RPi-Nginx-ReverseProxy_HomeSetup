@@ -30,75 +30,11 @@ Initial steps to be able to work remotely:
 
 - Setup a functional Raspberry Linux version (Raspbian **Lite**)
   - https://www.raspberrypi.org/downloads/ 
-  
-  - Create SD card using [BalenaEtcher](https://www.balena.io/etcher/)
-  
-  - create **ssh** file ('no extension') on the boot partition
-  
-  - Connect in ssh with default credentials: pi / raspberry 
-  
-    ```bash
-    ssh <USERNAME>@<PI ip>
-    ```
-  
-  - change password: 
-  
-    ```bash
-    passwd
-    ```
-  
-  - On **your** computer [generate](https://www.raspberrypi.org/documentation/remote-access/ssh/passwordless.md) ssh key-pair for remote connection (easier) 
-  
-    ```bash
-    ssh-keygen
-    ```
-  
-  -  key is generated in ~/.ssh/ named id_rsa (private key) and id_rsa_pub (public key to be copied to RPi)
-  
-  -  Copy id to RPI
-  
-     ```bash
-     ssh-copy-id <USERNAME>@<IP-ADDRESS>
-     ```
-  
-  -  Backup private key (just in case)
-  
-     ```bash
-     cp ~/.ssh/id_rsa ~/<keyname.pem>
-     ```
-  
-  - Disable ssh authentication by password on Rpi
-  
-    - Connect using key
-  
-    ```bash
-    ssh -i <keyname.pem> <USERNAME>@<IP-ADDRESS>
-    ```
-  
-    - Edit sshd_config
-  
-    ```bash
-    sudo nano /etc/ssh/sshd_config
-    ```
-    
-  - Uncomment and set to no, the line:
-    
-    ```bash
-    # To disable tunneled clear text passwords, change to no here!
-    PasswordAuthentication no
-    ```
-  
-    -  Restart ssh service
-  
-    ```bash
-     sudo service ssh restart
-    ```
-  
+  - check git RPi_Setup [here](https://github.com/terman37/RPI-Setup)
 - On ISP router:
-  
   - Bind Internal router MAC address to <RouterIP> 
   - Place <RouterIP> in DMZ
-  
+
 - On internal router:
   
   - Bind RPI MAC address to <RPI IP> 
@@ -286,14 +222,6 @@ Initial steps to be able to work remotely:
   
 
 ## Tips
-
-- Raspberry Pi
-
-  - Shutdown the raspberry pi
-
-    ```bash
-    sudo shutdown -h now
-    ```
 
 - Nginx
 
